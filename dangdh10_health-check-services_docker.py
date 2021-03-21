@@ -1,26 +1,20 @@
-import os
 import subprocess
 import re
+from datetime import datetime
 
-def health_check_services():
-    #check_services = str(os.system("screen -ls"))
-    #print("day ra"+check_services)
-    check_services = str(subprocess.check_output(['screen','-ls']))
-    #print("hello "+str(check_services))
-    if re.search("services_1",check_services) and re.search("services_2",check_services):
-        return("services_1 and services_2")
-    if re.search("services_1", check_services) or re.search("services_2", check_services):
-        return re.search("services_1", check_services) if "services_2" else "services_1"
-    else:
-        return None
-#def check_container_running():
 
-if __name__ == "__main__":
-    check_services = str(health_check_services())
-    print("inside " + check_services)
-    if(check_services == None):
-        logs = "Checkservices,Services_1={service1}, Services_2={service2}"
-        print (logs.format(service1=1,service2=0))
-    else:
-        logs = "Checkservices,Services_1={service1}, Services_2={service2}"
-        print (logs.format(service1=1,service2=0))
+def health_check_services_inside_container(container_name, name_services):
+    check_metrics = str(subprocess.check_output(['docker', 'exec', container_name, 'screen', '-ls']))
+	# print(re.search(name_services,check_metrics))
+	return 1 if re.search(name_services, check_metrics) else 0
+
+if __name__ == '__main__':
+    current_time = str(datetime.now().strftime("%d/%m/%Y_%H:%M:%S"))
+    check_services = str(health_check_services_inside_container("dangdh_ubuntu", "e962d98ef288"))
+	print('Check,tag1='+check_services+',tag2='+current_time+' i=dangdh')
+
+
+
+# from datetime import datetime
+# current_time = datetime.now().strftime("%d/%m/%Y_%H:%M:%S")
+# print('Check,tag1=a,tag2='+str(current_time)+' i=42i')
