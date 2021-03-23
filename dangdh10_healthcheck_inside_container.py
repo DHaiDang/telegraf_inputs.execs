@@ -1,26 +1,47 @@
+from influxdb import InfluxDBClient
+import uuid
+import random
+import time
 import subprocess
+import re
+from datetime import datetime
 
-def health_check_services_inside_container(container_name):
-    sub_command_check_1 = 'pwd'
-    sub_command_check_2 = ''
-    check_metrics = subprocess.check_output(['docker', 'exec', container_name, sub_command_check_1, sub_command_check_2])
+def health_check_services_inside_container(container_name, name_services):
+	check_metrics = str(subprocess.check_output(['docker', 'exec', container_name, 'screen', '-ls']))
+	return 1 if re.search(name_services, check_metrics) else 0
 
-    # if re.search("services_1",check_services) and re.search("services_2",check_services):
-    #     return("services_1 and services_2")
-    # if re.search("services_1", check_services) or re.search("services_2", check_services):
-    #     return re.search("services_1", check_services) if "services_2" else "services_1"
-    # else:
-    #     return None
-    return str(check_metrics)
+client = InfluxDBClient(host='localhost', port=8086)
+client.create_database('dang_test2')
 
-if __name__ == '__main__':
-    check_services = health_check_services_inside_container("dangdh_ubuntu")
-    logs = "Checkservices,Pwd_directory={service1}"
-    print(logs.format(service1=check_services))
-    # if(check_services == None):
-    #     logs = "Checkservices,Services_1={service1}, Services_2={service2}"
-    #     print (logs.format(service1=1,service2=0))
-    # else:
-    #     logs = "Checkservices,Services_1={service1}, Services_2={service2}"
-    #     print (logs.format(service1=1,service2=0))
+measurement_name = 'dagntest2'
+number_of_points = 250000
+data_end_time = int(time.time() * 1000)
+times = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+status = health_check_services_inside_container("dangdh_ubuntu", "e962d98ef288")
 
+data = []
+data.append("{measurement},status={status},lastcheck={lastcheck} code={code},timecheck={timecheck} {timestamp}"
+	.format(measurement=measurement_name,
+		status="status",
+		code=status,
+		lastcheck="lastcheck",
+		timecheck = 2,
+		z=random.randint(0,50),
+		timestamp=data_end_time))
+current_point_time = data_end_time
+for i in range(number_of_points-1):
+	current_point_time = current_point_time - random.randint(1,100)
+	data.append("{measurement},status={status},lastcheck={lastcheck} code={code},timecheck={timecheck} {timestamp}"
+		.format(measurement=measurement_name,
+			status="status",
+			code=status,
+			lastcheck="lastcheck",
+			timecheck = 2,
+			z=random.randint(0,50),
+			timestamp=current_point_time))
+
+client_write_start_time = time.perf_counter()
+client.write_points(data, database='dang_test2', time_precision='ms', batch_size=10000, protocol='line')
+client_write_end_time = time.perf_counter()
+
+print("Write: {time}s".format(time=client_write_end_time - client_write_start_time))
